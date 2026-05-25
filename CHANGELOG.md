@@ -16,11 +16,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning:
 ### Added
 
 - Special-case collapse for `<tr>` exits. Because `display: table-row`
-  ignores CSS `height`, animating the row alone has no visible effect;
-  switching it to `display: block` would break column alignment. Each
-  cell's padding, `font-size`, and `line-height` are now animated to
-  zero alongside the row's exit, so the row's intrinsic height shrinks
-  with the animation while the table layout stays intact.
+  derives its height from the tallest cell rather than its own CSS
+  `height`, each cell's padding, `font-size`, and `line-height` are
+  now animated to zero alongside the row's exit. The row's intrinsic
+  height shrinks with the animation while the table layout stays
+  intact.
 - `fontSize` and `lineHeight` added to `PX_PROPS` so the keyframe
   builder emits them with a `px` unit instead of as bare numbers
   (which WAAPI silently ignores).
