@@ -82,10 +82,22 @@ plateau, `overflow: hidden` is held throughout so content doesn't spill.
 </.animated>
 ```
 
+**Any HTML tag.** Default is `<div>`, but pass `as=` to render anything —
+useful for animating list items, inline text, semantic sections.
+
+```heex
+<ul>
+  <.animated :for={item <- @items} as="li" id={item.id} initial={%{y: 8}}>
+    {item.label}
+  </.animated>
+</ul>
+```
+
 ## `<.animated>` attributes
 
 | Attribute    | Type   | Default | Purpose                                                                                         |
 | ------------ | ------ | ------- | ----------------------------------------------------------------------------------------------- |
+| `as`         | string | `"div"` | HTML tag to render — any valid element name (`"li"`, `"span"`, `"section"`, ...).               |
 | `initial`    | map    | `nil`   | Style values applied before the enter animation. Drives the enter "from".                       |
 | `animate`    | map    | `nil`   | Target style values for enter. Auto-resolved from `initial` if omitted.                         |
 | `exit`       | map    | `nil`   | Style values to animate to when LiveView removes the element.                                   |

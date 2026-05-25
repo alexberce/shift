@@ -57,6 +57,10 @@ defmodule Shift do
     Spring: `%{type: :spring, stiffness: 260, damping: 20, mass: 1}`.\
     """
 
+  attr :as, :string,
+    default: "div",
+    doc: "HTML tag to render — any valid element name (e.g. `\"li\"`, `\"span\"`, `\"section\"`)."
+
   attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block
@@ -76,14 +80,15 @@ defmodule Shift do
     assigns = assign(assigns, :shift, Jason.encode!(spec))
 
     ~H"""
-    <div
+    <.dynamic_tag
+      tag_name={@as}
       class={@class}
       data-shift={@shift}
       phx-remove={exit_js(@transition)}
       {@rest}
     >
       {render_slot(@inner_block)}
-    </div>
+    </.dynamic_tag>
     """
   end
 
