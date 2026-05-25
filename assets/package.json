@@ -1,0 +1,14 @@
+{
+  "name": "shift-dev",
+  "private": true,
+  "description": "Dev-only JS toolchain for the Shift runtime. Not published.",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.0",
+    "jsdom": "^25.0.0"
+  }
+}
