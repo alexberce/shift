@@ -1,0 +1,12 @@
+/_build/
+/cover/
+/deps/
+/doc/
+/tmp/
+
+erl_crash.dump
+*.ez
+shift-*.tar
+
+# JS dev toolchain (vitest, etc.)
+/assets/node_modules/
