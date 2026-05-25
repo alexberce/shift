@@ -28,6 +28,8 @@
 import { enter } from "./enter.js";
 import { exit } from "./exit.js";
 import { relayout } from "./relayout.js";
+import { TRACKED } from "./state.js";
+import { measure } from "./measure.js";
 
 function scan(node) {
   if (node.nodeType !== Node.ELEMENT_NODE) return;
@@ -78,4 +80,25 @@ export function init() {
 
   /** Exit animations, dispatched by the component's `phx-remove`. */
   document.addEventListener("shift:exit", (event) => exit(event.target));
+
+  /**
+   * Window resize reflows the page without firing any DOM mutations, so the
+   * MutationObserver never wakes up and every tracked element's cached
+   * `__shiftLayout` goes stale. The next real layout change would then FLIP
+   * against the pre-resize positions, animating the resize delta. Refresh
+   * every cache on resize (rAF-coalesced for noisy resize streams).
+   */
+  let resizeScheduled = false;
+  window.addEventListener("resize", () => {
+    if (resizeScheduled) return;
+    resizeScheduled = true;
+    requestAnimationFrame(() => {
+      resizeScheduled = false;
+      for (const el of TRACKED) {
+        if (!el.isConnected) continue;
+        if (el.__shiftTransitioning) continue;
+        el.__shiftLayout = measure(el);
+      }
+    });
+  });
 }

@@ -21,5 +21,28 @@ export function measure(el) {
     left += cur.offsetLeft || 0;
     cur = cur.offsetParent;
   }
-  return { top, left, width: el.offsetWidth, height: el.offsetHeight };
+  /**
+   * Local position — relative to the immediate parent. Computed as the
+   * element's body-relative offset minus the parent's body-relative offset
+   * (offsetTop alone is relative to the nearest positioned ancestor, which
+   * is usually the body for static-flow content). Used as the FLIP gate so
+   * we don't animate every element on the page when something far up the
+   * page shrinks and pushes everything below.
+   */
+  let parentTop = 0;
+  let parentLeft = 0;
+  let pCur = el.parentElement;
+  while (pCur) {
+    parentTop += pCur.offsetTop || 0;
+    parentLeft += pCur.offsetLeft || 0;
+    pCur = pCur.offsetParent;
+  }
+  return {
+    top,
+    left,
+    width: el.offsetWidth,
+    height: el.offsetHeight,
+    localTop: top - parentTop,
+    localLeft: left - parentLeft,
+  };
 }

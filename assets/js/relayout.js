@@ -60,8 +60,20 @@ export function relayout() {
     const dw = next.width - prev.width;
     const dh = next.height - prev.height;
 
+    /**
+     * Local position delta — within the immediate parent. This is the gate
+     * for FLIP. If a sibling here was removed, local delta is real and we
+     * animate. If something far up the page got shorter and pushed every
+     * subsequent element along, local delta is zero (only body-relative
+     * coordinates moved) — we skip, so unrelated lists below the change
+     * don't all animate too.
+     */
+    const localDx = (prev.localLeft ?? prev.left) - (next.localLeft ?? next.left);
+    const localDy = (prev.localTop ?? prev.top) - (next.localTop ?? next.top);
+
     const animatePos =
-      !disabled.includes("position") && (Math.abs(dx) > 1 || Math.abs(dy) > 1);
+      !disabled.includes("position") &&
+      (Math.abs(localDx) > 1 || Math.abs(localDy) > 1);
     const animateSize =
       !disabled.includes("size") && (Math.abs(dw) > 1 || Math.abs(dh) > 1);
 

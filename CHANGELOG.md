@@ -3,6 +3,26 @@
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning:
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.1.2
+
+### Fixed
+
+- Position FLIP is now gated by the element's position relative to its
+  immediate parent, not its body-relative offset. Previously, any layout
+  change that shrank content above a tracked list — a delete in one
+  demo, for instance — would shift everything below it in body
+  coordinates, and Shift would FLIP every unrelated element down the
+  page back to its old absolute position. Now only elements whose
+  position within their own parent changes get animated; the body-
+  relative delta is still what the FLIP translates by, so bottom-
+  anchored layouts (toast stacks) keep working.
+- Cached layouts now refresh on window resize. The MutationObserver
+  doesn't fire on a resize, so previously every tracked element's
+  `__shiftLayout` went stale and the next real layout change would FLIP
+  against the pre-resize positions — animating the resize delta into
+  whatever change came next. A debounced resize listener now remeasures
+  every tracked element so the next FLIP starts from the current layout.
+
 ## v0.1.1
 
 ### Fixed
