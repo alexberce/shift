@@ -28,7 +28,7 @@
 import { enter } from "./enter.js";
 import { exit } from "./exit.js";
 import { relayout } from "./relayout.js";
-import { TRACKED } from "./state.js";
+import { TRACKED, RUNTIME } from "./state.js";
 import { measure } from "./measure.js";
 
 function scan(node) {
@@ -118,6 +118,18 @@ export function init() {
 
   /** Exit animations, dispatched by the component's `phx-remove`. */
   document.addEventListener("shift:exit", (event) => exit(event.target));
+
+  /**
+   * Mute exit animations during a `live_redirect` (full LV swap). Mid-
+   * page interactions are unaffected: their `phx:page-loading-start`
+   * detail.kind is "element", not "redirect".
+   */
+  window.addEventListener("phx:page-loading-start", (event) => {
+    if (event.detail?.kind === "redirect") RUNTIME.navigating = true;
+  });
+  window.addEventListener("phx:page-loading-stop", () => {
+    RUNTIME.navigating = false;
+  });
 
   /**
    * Window resize reflows the page without firing any DOM mutations, so the

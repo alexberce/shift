@@ -22,11 +22,14 @@
  *      attribute that we've never SEEN before is a pending enter.
  */
 
-import { SEEN, TRACKED, readSpec } from "./state.js";
+import { SEEN, TRACKED, RUNTIME, readSpec } from "./state.js";
 import { measure } from "./measure.js";
 import { REST, fillCollapseProps, buildKeyframes } from "./keyframes.js";
 
 export function exit(el) {
+  /** Skip exits during a `live_redirect` — see RUNTIME.navigating. */
+  if (RUNTIME.navigating) return;
+
   const spec = readSpec(el);
   if (!spec) return;
 

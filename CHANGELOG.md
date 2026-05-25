@@ -3,6 +3,14 @@
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning:
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.1.5
+
+### Fixed
+
+- Exit animations no longer fire during a `live_redirect`. Mid-page
+  interactions (clicks, form submits) still animate exits normally
+  because their loading kind is `"element"`, not `"redirect"`.
+
 ## v0.1.4
 
 ### Fixed

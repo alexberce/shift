@@ -29,6 +29,12 @@ export const SEEN = new WeakSet();
 export const TRACKED = new Set();
 
 /**
+ * Runtime-wide flags. `navigating` is true while LiveView is between a
+ * `live_redirect` start and stop. Exit animations skip in that window.
+ */
+export const RUNTIME = { navigating: false };
+
+/**
  * Read and parse the `data-shift` spec from an element. Cached on the
  * element, keyed on the raw string.
  *
