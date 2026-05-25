@@ -33,8 +33,14 @@ import { measure } from "./measure.js";
 
 function scan(node) {
   if (node.nodeType !== Node.ELEMENT_NODE) return;
-  if (node.matches("[data-shift]")) enter(node);
-  node.querySelectorAll("[data-shift]").forEach(enter);
+  if (node.matches("[data-shift]")) {
+    enter(node);
+    observeVisibility(node);
+  }
+  node.querySelectorAll("[data-shift]").forEach((el) => {
+    enter(el);
+    observeVisibility(el);
+  });
 }
 
 /**
@@ -60,12 +66,44 @@ function scheduleRelayout() {
 }
 
 /**
+ * Visibility observer — seeds `__shiftLayout` when a tracked element
+ * transitions from hidden (zero-area / detached layout) to visible.
+ *
+ * The first measurement at enter time is null for elements mounted inside
+ * a `display: none` ancestor. Without this, the cache stays empty until the
+ * first DOM mutation while the element is visible — but by then the move
+ * has already happened, so the FLIP has no pre-move position to anchor to
+ * and the element snaps into place without animation.
+ */
+let visibilityObserver;
+
+function observeVisibility(el) {
+  if (visibilityObserver) visibilityObserver.observe(el);
+}
+
+/**
  * Wire the runtime up to the page. Call once on page load, after the DOM is
  * parsed (e.g. from your app.js after liveSocket.connect()).
  */
 export function init() {
+  visibilityObserver = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        const el = entry.target;
+        if (!entry.isIntersecting) continue;
+        if (el.__shiftLayout) continue;
+        const layout = measure(el);
+        if (layout) el.__shiftLayout = layout;
+      }
+    },
+    { threshold: 0 },
+  );
+
   /** Elements present in the initial server render. */
-  document.querySelectorAll("[data-shift]").forEach(enter);
+  document.querySelectorAll("[data-shift]").forEach((el) => {
+    enter(el);
+    observeVisibility(el);
+  });
 
   /**
    * Elements LiveView patches in later, plus inferred animations for

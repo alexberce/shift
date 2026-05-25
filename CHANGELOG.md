@@ -3,6 +3,18 @@
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning:
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.1.4
+
+### Fixed
+
+- Layout cache now seeds when an element transitions from hidden to
+  visible. The v0.1.3 fix stopped caching a bogus `(0, 0)` for elements
+  inside a `display: none` ancestor, but the cache stayed empty until
+  the first DOM mutation while visible — and by that point the move
+  had already happened, leaving FLIP without a pre-move position to
+  animate from. An `IntersectionObserver` now watches every tracked
+  element and seeds the cache the moment visibility changes.
+
 ## v0.1.3
 
 ### Fixed
