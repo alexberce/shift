@@ -3,6 +3,28 @@
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning:
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.1.1
+
+### Fixed
+
+- Sibling layout caches now refresh on every animation frame during a
+  size-collapsing exit, and are nulled when the element is finally
+  removed. Previously, the post-removal relayout would FLIP each
+  neighbor by the full reflow distance, snapping them back to their
+  pre-exit positions and animating up again.
+
+### Added
+
+- Special-case collapse for `<tr>` exits. Because `display: table-row`
+  ignores CSS `height`, animating the row alone has no visible effect;
+  switching it to `display: block` would break column alignment. Each
+  cell's padding, `font-size`, and `line-height` are now animated to
+  zero alongside the row's exit, so the row's intrinsic height shrinks
+  with the animation while the table layout stays intact.
+- `fontSize` and `lineHeight` added to `PX_PROPS` so the keyframe
+  builder emits them with a `px` unit instead of as bare numbers
+  (which WAAPI silently ignores).
+
 ## v0.1.0
 
 Initial release.
