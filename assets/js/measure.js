@@ -13,6 +13,23 @@
  * getBoundingClientRect.
  */
 export function measure(el) {
+  /**
+   * Hidden elements (anywhere under a `display: none` ancestor) report
+   * `offsetParent === null` and zero metrics. Caching that as a "real"
+   * layout means the first time the element is shown and then mutated,
+   * FLIP diffs the new position against (0, 0) and animates the element
+   * in from the top-left of the page. Return null so callers know to
+   * skip caching until the element actually has a layout.
+   */
+  if (
+    el.offsetParent === null &&
+    el !== document.body &&
+    el !== document.documentElement &&
+    getComputedStyle(el).position !== "fixed"
+  ) {
+    return null;
+  }
+
   let top = 0;
   let left = 0;
   let cur = el;
@@ -44,5 +61,6 @@ export function measure(el) {
     height: el.offsetHeight,
     localTop: top - parentTop,
     localLeft: left - parentLeft,
+    parent: el.parentElement,
   };
 }

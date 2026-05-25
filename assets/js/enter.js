@@ -37,9 +37,13 @@ export function enter(el) {
 
   /**
    * Every animated element seeds its layout, so a later mid-life change
-   * (position OR size) can be measured against it.
+   * (position OR size) can be measured against it. If the element is
+   * currently hidden (under `display: none`), `measure` returns null —
+   * we leave `__shiftLayout` undefined and let relayout seed it once the
+   * element actually has a layout.
    */
-  el.__shiftLayout = measure(el);
+  const initialLayout = measure(el);
+  if (initialLayout) el.__shiftLayout = initialLayout;
 
   /**
    * Cache the element's position in its parent so we can restore it on exit

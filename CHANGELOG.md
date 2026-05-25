@@ -3,6 +3,23 @@
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning:
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.1.3
+
+### Fixed
+
+- Elements that mount inside a `display: none` ancestor no longer cache
+  a bogus `(0, 0)` layout. The next time they appear and then change,
+  FLIP would diff against the stale zero and fly the element in from
+  the top-left of the page. `measure` now returns `null` when the
+  element has no layout, and the cache stays empty until the element
+  is actually visible.
+- Cross-parent moves where the element becomes the *first* child of
+  its new parent now animate. The previous local-position FLIP gate
+  saw `localTop = 0` in both the old and new parent and skipped the
+  animation entirely. Relayout now also FLIPs whenever the element's
+  parent itself changes, using the body-relative delta for the
+  transform amount.
+
 ## v0.1.2
 
 ### Fixed

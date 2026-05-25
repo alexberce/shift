@@ -43,6 +43,13 @@ export function relayout() {
 
     const prev = el.__shiftLayout;
     const next = measure(el);
+    /**
+     * `measure` returns null when the element is currently hidden (under
+     * `display: none`). Keep the cache as-is in that case — we have no
+     * better value to write, and a future relayout pass after the element
+     * becomes visible will seed it correctly.
+     */
+    if (!next) continue;
     el.__shiftLayout = next;
     /**
      * Refresh the cached DOM slot too — this is the element's "last stable
@@ -67,13 +74,20 @@ export function relayout() {
      * subsequent element along, local delta is zero (only body-relative
      * coordinates moved) — we skip, so unrelated lists below the change
      * don't all animate too.
+     *
+     * When the parent itself changed, local position is incomparable — the
+     * element jumped to a different layout context. Always FLIP in that
+     * case, regardless of local delta (an element that becomes the first
+     * child of its new parent has localTop = 0 in both old and new, but is
+     * still a real move that we want to animate).
      */
     const localDx = (prev.localLeft ?? prev.left) - (next.localLeft ?? next.left);
     const localDy = (prev.localTop ?? prev.top) - (next.localTop ?? next.top);
+    const parentChanged = prev.parent !== next.parent;
 
     const animatePos =
       !disabled.includes("position") &&
-      (Math.abs(localDx) > 1 || Math.abs(localDy) > 1);
+      (parentChanged || Math.abs(localDx) > 1 || Math.abs(localDy) > 1);
     const animateSize =
       !disabled.includes("size") && (Math.abs(dw) > 1 || Math.abs(dh) > 1);
 
