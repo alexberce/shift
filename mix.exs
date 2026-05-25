@@ -1,7 +1,7 @@
 defmodule Shift.MixProject do
   use Mix.Project
 
-  @version "0.1.5"
+  @version "0.1.6"
   @source_url "https://github.com/alexberce/shift"
 
   def project do
@@ -44,7 +44,7 @@ defmodule Shift.MixProject do
       maintainers: ["Alexandru Berce"],
       licenses: ["MIT"],
       links: %{"GitHub" => @source_url},
-      files: ~w(lib assets/js mix.exs README.md LICENSE CHANGELOG.md .formatter.exs)
+      files: ~w(lib assets/js mix.exs package.json README.md LICENSE CHANGELOG.md .formatter.exs)
     ]
   end
 

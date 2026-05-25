@@ -1,0 +1,13 @@
+{
+  "name": "shift",
+  "description": "JS runtime for the Shift animations library for Phoenix LiveView.",
+  "type": "module",
+  "main": "./assets/js/shift.js",
+  "module": "./assets/js/shift.js",
+  "exports": {
+    ".": {
+      "import": "./assets/js/shift.js",
+      "default": "./assets/js/shift.js"
+    }
+  }
+}
