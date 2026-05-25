@@ -23,6 +23,7 @@
  */
 
 import { SEEN, TRACKED, readSpec } from "./state.js";
+import { measure } from "./measure.js";
 import { REST, fillCollapseProps, buildKeyframes } from "./keyframes.js";
 
 export function exit(el) {
@@ -94,6 +95,100 @@ export function exit(el) {
     "exit",
   );
   el.animate(keyframes, options);
+
+  /**
+   * `display: table-row` ignores CSS `height` — the row's height is derived
+   * from its tallest cell. We can't switch the row to `display: block`
+   * without breaking column alignment, so we collapse each cell from the
+   * inside: padding to 0 (shrinks the cell's box) and font-size +
+   * line-height to 0 (collapses the inline content height). With both, the
+   * cell — and therefore the row — can actually reach 0 height while the
+   * table layout stays intact.
+   */
+  if (
+    hasSize &&
+    "height" in exitMap &&
+    getComputedStyle(el).display === "table-row"
+  ) {
+    for (const cell of el.children) {
+      if (cell.tagName !== "TD" && cell.tagName !== "TH") continue;
+      const ccs = getComputedStyle(cell);
+      const cellFrom = {
+        paddingTop: parseFloat(ccs.paddingTop) || 0,
+        paddingBottom: parseFloat(ccs.paddingBottom) || 0,
+        fontSize: parseFloat(ccs.fontSize) || 0,
+        lineHeight:
+          ccs.lineHeight === "normal"
+            ? (parseFloat(ccs.fontSize) || 0) * 1.2
+            : parseFloat(ccs.lineHeight) || 0,
+        overflow: "hidden",
+      };
+      const cellTo = {
+        paddingTop: 0,
+        paddingBottom: 0,
+        fontSize: 0,
+        lineHeight: 0,
+        overflow: "hidden",
+      };
+      const built = buildKeyframes(cellFrom, cellTo, spec.transition, "exit");
+      cell.animate(built.keyframes, built.options);
+    }
+  }
+
+  /**
+   * Size-collapse exits cause siblings to reflow continuously while the box
+   * shrinks (the box stays in flow, so the parent's layout updates each
+   * frame). The MutationObserver doesn't fire during a WAAPI animation, so
+   * sibling __shiftLayout caches stay frozen at their pre-collapse positions.
+   *
+   * By the time LiveView removes the element, the post-removal relayout
+   * computes a delta against those stale caches and FLIPs the siblings —
+   * visibly snapping them back to where they were and animating them up
+   * again.
+   *
+   * Keep the sibling caches honest by remeasuring on every animation frame
+   * while this size-collapsing exit is alive.
+   */
+  if (hasSize) {
+    const exitingParent = el.parentElement;
+    const tick = () => {
+      if (!el.isConnected) {
+        /**
+         * Element was just removed. Null sibling caches so the post-removal
+         * relayout has no prev to diff against — there's nothing to FLIP
+         * because siblings already rode up via CSS reflow during the height
+         * collapse. The very next relayout will repopulate the caches with
+         * current positions and normal FLIP behavior resumes afterward.
+         */
+        if (exitingParent && exitingParent.isConnected) {
+          clearChildLayouts(exitingParent);
+        }
+        return;
+      }
+      refreshChildLayouts(exitingParent);
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+}
+
+function refreshChildLayouts(parent) {
+  if (!parent) return;
+  for (const child of parent.children) {
+    if (!child.hasAttribute("data-shift")) continue;
+    if (!child.isConnected) continue;
+    if (child.__shiftTransitioning) continue;
+    child.__shiftLayout = measure(child);
+  }
+}
+
+function clearChildLayouts(parent) {
+  if (!parent) return;
+  for (const child of parent.children) {
+    if (!child.hasAttribute("data-shift")) continue;
+    if (child.__shiftTransitioning) continue;
+    child.__shiftLayout = null;
+  }
 }
 
 /**

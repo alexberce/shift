@@ -54,6 +54,8 @@ export const PX_PROPS = new Set([
   "borderBottomWidth",
   "borderLeftWidth",
   "borderRightWidth",
+  "fontSize",
+  "lineHeight",
 ]);
 
 /**
