@@ -1,5 +1,9 @@
 # Shift
 
+[![Hex.pm](https://img.shields.io/hexpm/v/shift.svg)](https://hex.pm/packages/shift)
+[![Hex Docs](https://img.shields.io/badge/hex-docs-blueviolet)](https://hexdocs.pm/shift)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 > Animations for Phoenix LiveView, that just work.
 
 One `<.animated>` component. Real spring physics. Smart defaults that read
