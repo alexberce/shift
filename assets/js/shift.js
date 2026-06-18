@@ -120,12 +120,25 @@ export function init() {
   document.addEventListener("shift:exit", (event) => exit(event.target));
 
   /**
-   * Mute exit animations during a `live_redirect` (full LV swap). Mid-
-   * page interactions are unaffected: their `phx:page-loading-start`
-   * detail.kind is "element", not "redirect".
+   * On a `live_redirect`, LiveView waits for every outgoing `phx-remove`
+   * exit timer to drain before showing the new page, so the longest exit
+   * delays the whole navigation.
+   *
+   * Strip `phx-remove` off the outgoing animated nodes here and LiveView
+   * registers no exit timers and swaps immediately. Sticky nodes survive
+   * the navigation, so leave theirs intact (LiveView already excludes them
+   * from the removal set). Mid-page exits run through patches (kind patch),
+   * not redirects, so they keep animating normally.
    */
   window.addEventListener("phx:page-loading-start", (event) => {
-    if (event.detail?.kind === "redirect") RUNTIME.navigating = true;
+    if (event.detail?.kind !== "redirect") return;
+
+    RUNTIME.navigating = true;
+
+    for (const el of document.querySelectorAll("[data-shift][phx-remove]")) {
+      if (el.closest("[phx-sticky]")) continue;
+      el.removeAttribute("phx-remove");
+    }
   });
   window.addEventListener("phx:page-loading-stop", () => {
     RUNTIME.navigating = false;

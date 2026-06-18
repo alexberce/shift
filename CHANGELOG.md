@@ -3,6 +3,15 @@
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning:
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.1.7
+
+### Fixed
+
+- `live_redirect` no longer waits for the outgoing page's exit animations
+  before showing the new page. Shift now strips `phx-remove` off the outgoing
+  animated nodes when the redirect starts, so LiveView swaps the page
+  immediately.
+
 ## v0.1.6
 
 ### Added

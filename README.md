@@ -138,7 +138,9 @@ A single `MutationObserver` watches the document. Every element with a
   transition.
 - **Exit** — when LiveView removes the element. Triggered by a `shift:exit`
   event dispatched from `phx-remove`; LiveView keeps the node alive for the
-  exit duration before actually removing it.
+  exit duration before actually removing it. On a `live_redirect` the exit
+  is skipped entirely, so Shift drops the `phx-remove` deferral and lets 
+  the new page render right away instead of waiting on the old page's exits.
 - **Layout** — between renders, if an element's position or size changed, a
   FLIP / size animation runs automatically. Opt out per-element with
   `disable={[:position]}` / `disable={[:size]}`.
