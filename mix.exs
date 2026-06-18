@@ -51,7 +51,7 @@ defmodule Shift.MixProject do
   defp docs do
     [
       main: "Shift",
-      extras: ["README.md", "CHANGELOG.md"]
+      extras: ["README.md", "CHANGELOG.md", "LICENSE"]
     ]
   end
 end
