@@ -159,29 +159,37 @@ export function exit(el) {
    * again.
    *
    * Keep the sibling caches honest by remeasuring on every animation frame
-   * while this size-collapsing exit is alive.
+   * while a size-collapsing exit is alive.
    */
-  if (hasSize) {
-    const exitingParent = el.parentElement;
-    const tick = () => {
-      if (!el.isConnected) {
-        /**
-         * Element was just removed. Null sibling caches so the post-removal
-         * relayout has no prev to diff against — there's nothing to FLIP
-         * because siblings already rode up via CSS reflow during the height
-         * collapse. The very next relayout will repopulate the caches with
-         * current positions and normal FLIP behavior resumes afterward.
-         */
-        if (exitingParent && exitingParent.isConnected) {
-          clearChildLayouts(exitingParent);
-        }
-        return;
-      }
-      refreshChildLayouts(exitingParent);
+  if (hasSize && el.parentElement) startParentTick(el.parentElement);
+}
+
+/**
+ * The per-frame sibling-remeasure loop, shared across every size-collapse exit
+ * in the same parent. Only one runs per parent no matter how many rows are
+ * collapsing at once: a loop per row would remeasure every sibling once per row
+ * per frame (O(rows²)) and lock the tab on a big list. It refreshes the parent's
+ * child caches each frame until the parent has no collapsing child left, then
+ * nulls them so the post-removal relayout has no stale prev to FLIP against.
+ */
+const activeTicks = new Set();
+function startParentTick(parent) {
+  if (activeTicks.has(parent)) return;
+  activeTicks.add(parent);
+
+  const tick = () => {
+    const stillCollapsing = [...parent.children].some(
+      (c) => c.__shiftTransitioning && c.hasAttribute("data-shift"),
+    );
+    if (stillCollapsing && parent.isConnected) {
+      refreshChildLayouts(parent);
       requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-  }
+      return;
+    }
+    activeTicks.delete(parent);
+    if (parent.isConnected) clearChildLayouts(parent);
+  };
+  requestAnimationFrame(tick);
 }
 
 /**
