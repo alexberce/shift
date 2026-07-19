@@ -35,8 +35,34 @@ export function enter(el) {
   const spec = readSpec(el);
   if (!spec) return;
 
-  const plan = enterPlan(el, spec);
-  if (plan) animateEnter(plan);
+  enterQueue.push({ el, spec });
+  if (!enterFlushScheduled) {
+    enterFlushScheduled = true;
+    queueMicrotask(flushEnters);
+  }
+}
+
+/**
+ * Flush the queued enters — every enterPlan read first (measure / offsetHeight /
+ * getComputedStyle), then every animateEnter write, so a burst of new rows
+ * forces layout once instead of once per row. Deferred by a microtask (still
+ * before the next paint), so the animations start on the same frame they would
+ * have run synchronously.
+ */
+const enterQueue = [];
+let enterFlushScheduled = false;
+
+function flushEnters() {
+  enterFlushScheduled = false;
+  const batch = enterQueue.splice(0, enterQueue.length);
+
+  // READ pass — every layout read for the whole burst, before any write.
+  const plans = batch
+    .map(({ el, spec }) => enterPlan(el, spec))
+    .filter(Boolean);
+
+  // WRITE pass — every animation.
+  for (const plan of plans) animateEnter(plan);
 }
 
 /**
