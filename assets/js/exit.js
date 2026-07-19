@@ -41,26 +41,8 @@ export function exit(el) {
   if (wantFade && !("opacity" in exitMap)) exitMap.opacity = 0;
   if (Object.keys(exitMap).length === 0) return;
 
-  const from = {};
-
-  for (const key of Object.keys(exitMap)) {
-    if (key === "height") from[key] = el.offsetHeight;
-    else if (key === "width") from[key] = el.offsetWidth;
-    else if (key in REST) from[key] = REST[key];
-    else from[key] = 0;
-  }
-
+  const from = buildExitFrom(el, exitMap);
   const hasSize = "height" in exitMap || "width" in exitMap;
-  if (hasSize) {
-    from.overflow = "hidden";
-    exitMap.overflow = "hidden";
-    /**
-     * Collapse padding/margin/border on the same axis so the box can fully
-     * shrink past its padding floor — otherwise the exit visually plateaus.
-     */
-    if ("height" in exitMap) fillCollapseProps(exitMap, from, el, "height");
-    if ("width" in exitMap) fillCollapseProps(exitMap, from, el, "width");
-  }
 
   /**
    * Mark as transitioning so relayout skips us (the WAAPI animation will
@@ -131,6 +113,33 @@ export function exit(el) {
    * while a size-collapsing exit is alive.
    */
   if (hasSize && el.parentElement) startParentTick(el.parentElement);
+}
+
+/**
+ * Build the `from` map for an exit — the resting side each property animates
+ * away from. Reads layout for height/width. For a size collapse it also holds
+ * `overflow: hidden` and collapses padding/margin/border on that axis, so the
+ * box can shrink past its padding floor instead of plateauing there. Mutates
+ * `exitMap` to hold overflow through the animation.
+ */
+function buildExitFrom(el, exitMap) {
+  const from = {};
+  for (const key of Object.keys(exitMap)) {
+    if (key === "height") from[key] = el.offsetHeight;
+    else if (key === "width") from[key] = el.offsetWidth;
+    else if (key in REST) from[key] = REST[key];
+    else from[key] = 0;
+  }
+
+  if ("height" in exitMap || "width" in exitMap) {
+    from.overflow = "hidden";
+    exitMap.overflow = "hidden";
+
+    if ("height" in exitMap) fillCollapseProps(exitMap, from, el, "height");
+    if ("width" in exitMap) fillCollapseProps(exitMap, from, el, "width");
+  }
+
+  return from;
 }
 
 /**
