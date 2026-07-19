@@ -107,6 +107,7 @@ useful for animating list items, inline text, semantic sections.
 | `exit`       | map    | `nil`   | Style values to animate to when LiveView removes the element.                                   |
 | `transition` | map    | `%{}`   | Tween: `%{duration: s, delay: s, easing: "ease-in-out"}` — `easing` is any CSS easing string. Spring: `%{type: :spring, stiffness: 260, damping: 20, mass: 1}`. |
 | `disable`    | list   | `[]`    | Opt out of inferred behaviors: `:fade`, `:position`, `:size`.                                   |
+| `pin_exit`   | boolean | `false` | On exit, lift the element out of flow (`position: fixed`) so a staying sibling closes the gap during the exit instead of snapping shut after removal. Best for fade and scale exits. |
 | `class`      | string | `nil`   | Standard HTML class attribute.                                                                  |
 
 All other HTML attributes (`id`, `data-*`, `aria-*`, ...) pass through to
