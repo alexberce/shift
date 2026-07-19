@@ -71,14 +71,19 @@ export function exit(el) {
 
   /**
    * DOM-slot restoration always runs (cascading exits stay in order even
-   * when no pin is applied). Pin only when:
-   *   - exit isn't a size-collapse (an accordion explicitly wants its
-   *     parent to shrink with it; pinning would freeze the parent at full
-   *     size and the panel would visibly shrink in mid-air), AND
-   *   - the parent has a SIBLING ENTERING in the same patch (popLayout-
-   *     style replacement: sliding window, toast queue swap). Otherwise
-   *     the exit is the only thing changing the layout and pinning would
-   *     shrink the parent immediately, snapping whatever sits below.
+   * when no pin is applied). Pin only when the exit isn't a size-collapse
+   * (an accordion explicitly wants its parent to shrink with it; pinning
+   * would freeze it at full size and shrink in mid-air), AND one of:
+   *   - one entered a moment ago (recentEnter).
+   *   - the parent has a SIBLING ENTERING in the same patch (popLayout-style
+   *     replacement: sliding window, toast queue swap). Detected without the
+   *     MutationObserver — morphdom inserts new nodes before phx-remove fires,
+   *     so a `data-shift` sibling we've never SEEN is a pending enter.
+   *   - `pin_exit` is opted in AND a surviving sibling sits after this element
+   *     (it will reflow up into the vacated slot). Off by default: pinning a
+   *     lone exit only drops the parent's height and snaps whatever sits below,
+   *     and pinning under a translate exit animates the leaver over the
+   *     neighbour that took its place.
    */
   restoreCascadingExitSlots();
   const parent = el.parentElement;
@@ -89,7 +94,11 @@ export function exit(el) {
     );
   const recentEnter =
     parent && performance.now() - (parent.__shiftLastEnterMs || 0) < 100;
-  if (!hasSize && (pendingSibling || recentEnter)) applyExitPin(el);
+  const survivingFollower = spec.pin_exit === true && hasSurvivingFollower(el);
+
+  if (!hasSize && (pendingSibling || recentEnter || survivingFollower)) {
+    applyExitPin(el);
+  }
 
   const { keyframes, options } = buildKeyframes(
     from,
@@ -173,6 +182,26 @@ export function exit(el) {
     };
     requestAnimationFrame(tick);
   }
+}
+
+/**
+ * Is there a tracked sibling after `el` that will survive this patch and
+ * reflow up into its slot? "Surviving" = already entered (SEEN) and not
+ * itself mid-exit. Used only under the opt-in `pin_exit`.
+ */
+function hasSurvivingFollower(el) {
+  let sib = el.nextElementSibling;
+  while (sib) {
+    if (
+      sib.hasAttribute("data-shift") &&
+      SEEN.has(sib) &&
+      !sib.__shiftTransitioning
+    ) {
+      return true;
+    }
+    sib = sib.nextElementSibling;
+  }
+  return false;
 }
 
 function refreshChildLayouts(parent) {
