@@ -15,7 +15,7 @@
  */
 
 import { TRACKED, readSpec } from "./state.js";
-import { measure } from "./measure.js";
+import { measure, untrackVisibility } from "./measure.js";
 import { buildKeyframes } from "./keyframes.js";
 
 export function relayout() {
@@ -29,6 +29,7 @@ export function relayout() {
      */
     if (!el.isConnected) {
       TRACKED.delete(el);
+      untrackVisibility(el);
       continue;
     }
     /**

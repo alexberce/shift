@@ -23,7 +23,7 @@
  */
 
 import { SEEN, TRACKED, RUNTIME, readSpec } from "./state.js";
-import { measure } from "./measure.js";
+import { measure, farOffscreen } from "./measure.js";
 import { REST, fillCollapseProps, buildKeyframes } from "./keyframes.js";
 
 export function exit(el) {
@@ -40,6 +40,14 @@ export function exit(el) {
   /** Default fade-out — opacity is the universal "departure" animation. */
   if (wantFade && !("opacity" in exitMap)) exitMap.opacity = 0;
   if (Object.keys(exitMap).length === 0) return;
+
+  /**
+   * Far outside the viewport — nobody will see the exit, so skip the animation
+   * (and, for a size collapse, its per-parent FLIP tick). LiveView still keeps
+   * the node alive for exit_time and removes it on its own timer; we just don't
+   * spend an animation on a row no one is looking at.
+   */
+  if (farOffscreen(el)) return;
 
   const hasSize = "height" in exitMap || "width" in exitMap;
 

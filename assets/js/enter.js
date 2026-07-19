@@ -18,7 +18,7 @@
  */
 
 import { SEEN, TRACKED, readSpec } from "./state.js";
-import { measure } from "./measure.js";
+import { measure, farOffscreen, trackVisibility } from "./measure.js";
 import {
   REST,
   fillCollapseProps,
@@ -31,6 +31,7 @@ export function enter(el) {
   if (SEEN.has(el)) return;
   SEEN.add(el);
   TRACKED.add(el);
+  trackVisibility(el);
 
   const spec = readSpec(el);
   if (!spec) return;
@@ -95,6 +96,13 @@ function enterPlan(el, spec) {
     el.__shiftSiblingIndex = [...el.parentElement.children].indexOf(el);
     el.parentElement.__shiftLastEnterMs = performance.now();
   }
+
+  /**
+   * Far outside the viewport — nobody will see the enter, so skip it and let
+   * the element appear at its resting state. Layout is already seeded above, so
+   * a later FLIP still works if it scrolls in and something shifts it.
+   */
+  if (farOffscreen(el)) return null;
 
   const disabled = spec.disable || [];
   const wantFade = !disabled.includes("fade");
