@@ -52,35 +52,11 @@ export function exit(el) {
   el.__shiftTransitioning = true;
 
   /**
-   * DOM-slot restoration always runs (cascading exits stay in order even
-   * when no pin is applied). Pin only when the exit isn't a size-collapse
-   * (an accordion explicitly wants its parent to shrink with it; pinning
-   * would freeze it at full size and shrink in mid-air), AND one of:
-   *   - one entered a moment ago (recentEnter).
-   *   - the parent has a SIBLING ENTERING in the same patch (popLayout-style
-   *     replacement: sliding window, toast queue swap). Detected without the
-   *     MutationObserver — morphdom inserts new nodes before phx-remove fires,
-   *     so a `data-shift` sibling we've never SEEN is a pending enter.
-   *   - `pin_exit` is opted in AND a staying sibling sits after this element
-   *     (it will reflow up into the vacated slot). Off by default: pinning a
-   *     lone exit only drops the parent's height and snaps whatever sits below,
-   *     and pinning under a translate exit animates the leaver over the
-   *     neighbour that took its place.
+   * DOM-slot restoration always runs so cascading exits stay in the order the
+   * user perceives, then we decide whether to pin this exit out of flow.
    */
   restoreCascadingExitSlots();
-  const parent = el.parentElement;
-  const pendingSibling =
-    parent &&
-    Array.from(parent.children).some(
-      (c) => c !== el && c.hasAttribute("data-shift") && !SEEN.has(c),
-    );
-  const recentEnter =
-    parent && performance.now() - (parent.__shiftLastEnterMs || 0) < 100;
-  const stayingSibling = spec.pin_exit === true && hasStayingSiblingAfter(el);
-
-  if (!hasSize && (pendingSibling || recentEnter || stayingSibling)) {
-    applyExitPin(el);
-  }
+  if (shouldPin(el, spec, hasSize)) applyExitPin(el);
 
   const { keyframes, options } = buildKeyframes(
     from,
@@ -113,6 +89,40 @@ export function exit(el) {
    * while a size-collapsing exit is alive.
    */
   if (hasSize && el.parentElement) startParentTick(el.parentElement);
+}
+
+/**
+ * Should this exit be pinned out of flow? Only non-size exits pin — a size
+ * collapse (an accordion) wants its parent to shrink with it; pinning would
+ * freeze it at full size and shrink in mid-air. For a non-size exit, pin when
+ * one of:
+ *   - one entered a moment ago (recentEnter).
+ *   - the parent has a SIBLING ENTERING in the same patch (popLayout-style
+ *     replacement: sliding window, toast queue swap). Detected without the
+ *     MutationObserver — morphdom inserts new nodes before phx-remove fires, so
+ *     a `data-shift` sibling we've never SEEN is a pending enter.
+ *   - `pin_exit` is opted in AND a staying sibling sits after this element (it
+ *     will reflow up into the vacated slot). Off by default: pinning a lone exit
+ *     only drops the parent's height and snaps whatever sits below, and pinning
+ *     under a translate exit animates the leaver over the neighbour that took
+ *     its place.
+ */
+function shouldPin(el, spec, hasSize) {
+  if (hasSize) return false;
+
+  const parent = el.parentElement;
+  if (!parent) return false;
+
+  const pendingSibling = Array.from(parent.children).some(
+    (c) => c !== el && c.hasAttribute("data-shift") && !SEEN.has(c),
+  );
+
+  const recentEnter =
+    performance.now() - (parent.__shiftLastEnterMs || 0) < 100;
+
+  const stayingSibling = spec.pin_exit === true && hasStayingSiblingAfter(el);
+
+  return pendingSibling || recentEnter || stayingSibling;
 }
 
 /**
