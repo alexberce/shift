@@ -41,7 +41,6 @@ export function exit(el) {
   if (wantFade && !("opacity" in exitMap)) exitMap.opacity = 0;
   if (Object.keys(exitMap).length === 0) return;
 
-  const from = buildExitFrom(el, exitMap);
   const hasSize = "height" in exitMap || "width" in exitMap;
 
   /**
@@ -52,37 +51,83 @@ export function exit(el) {
   el.__shiftTransitioning = true;
 
   /**
+   * Size-collapse exits read layout (offsetHeight / getComputedStyle, in
+   * buildExitFrom and tableRowCellPlans) to build the collapse. Done per row and
+   * synchronously, each read interleaves with the previous row's `el.animate`
+   * write and forces its own reflow — one per row, hundreds of ms on a big
+   * filtered table. Queue them and flush once (flushSizeExits): every read
+   * first, then every animation, so the whole burst forces layout a single time.
+   *
+   * Non-size exits read no layout (from-values come from REST), so there's
+   * nothing to batch — they run synchronously below, unchanged.
+   */
+  if (hasSize) {
+    sizeQueue.push({ el, spec, exitMap });
+    if (!sizeFlushScheduled) {
+      sizeFlushScheduled = true;
+      queueMicrotask(flushSizeExits);
+    }
+    return;
+  }
+
+  /**
    * DOM-slot restoration always runs so cascading exits stay in the order the
    * user perceives, then we decide whether to pin this exit out of flow.
    */
   restoreCascadingExitSlots();
   if (shouldPin(el, spec, hasSize)) applyExitPin(el);
-
-  animateExit(el, spec, from, exitMap);
-
-  /**
-   * Size-collapse exits cause siblings to reflow continuously while the box
-   * shrinks (the box stays in flow, so the parent's layout updates each
-   * frame). The MutationObserver doesn't fire during a WAAPI animation, so
-   * sibling __shiftLayout caches stay frozen at their pre-collapse positions.
-   *
-   * By the time LiveView removes the element, the post-removal relayout
-   * computes a delta against those stale caches and FLIPs the siblings —
-   * visibly snapping them back to where they were and animating them up
-   * again.
-   *
-   * Keep the sibling caches honest by remeasuring on every animation frame
-   * while a size-collapsing exit is alive.
-   */
-  if (hasSize && el.parentElement) startParentTick(el.parentElement);
+  animateExit(exitPlan(el, spec, exitMap));
 }
 
 /**
- * Play an exit's WAAPI animation — the element itself, then the per-cell
- * collapse animations for a `display: table-row` (see tableRowCellPlans, which
- * returns an empty list for anything else).
+ * Flush the queued size-collapse exits — every layout read first (buildExitFrom
+ * / tableRowCellPlans), then every animation, so a burst of collapsing rows
+ * forces layout once instead of once per row. Deferred by a microtask (still
+ * before the next paint), so the animations start on the same frame they would
+ * have run synchronously.
  */
-function animateExit(el, spec, from, exitMap) {
+const sizeQueue = [];
+let sizeFlushScheduled = false;
+
+function flushSizeExits() {
+  sizeFlushScheduled = false;
+  const batch = sizeQueue.splice(0, sizeQueue.length);
+
+  restoreCascadingExitSlots();
+
+  // READ pass — every layout read for the whole burst, before any write.
+  const plans = batch.map(({ el, spec, exitMap }) =>
+    exitPlan(el, spec, exitMap),
+  );
+
+  // WRITE pass — every animation, then the shared per-parent remeasure loop.
+  for (const plan of plans) {
+    animateExit(plan);
+    if (plan.el.parentElement) startParentTick(plan.el.parentElement);
+  }
+}
+
+/**
+ * The read half of an exit: measure the `from` map and the table-row cell
+ * plans. Kept separate from animateExit (the write half) so a batch can do all
+ * the reads before any of the writes.
+ */
+function exitPlan(el, spec, exitMap) {
+  return {
+    el,
+    spec,
+    exitMap,
+    from: buildExitFrom(el, exitMap),
+    cellPlans: tableRowCellPlans(el, exitMap),
+  };
+}
+
+/**
+ * The write half of an exit: play the element's WAAPI animation, then the
+ * per-cell collapse animations for a `display: table-row` (an empty `cellPlans`
+ * for anything else).
+ */
+function animateExit({ el, spec, from, exitMap, cellPlans }) {
   const { keyframes, options } = buildKeyframes(
     from,
     exitMap,
@@ -91,10 +136,7 @@ function animateExit(el, spec, from, exitMap) {
   );
   el.animate(keyframes, options);
 
-  for (const { cell, from: cellFrom, to: cellTo } of tableRowCellPlans(
-    el,
-    exitMap,
-  )) {
+  for (const { cell, from: cellFrom, to: cellTo } of cellPlans) {
     const built = buildKeyframes(cellFrom, cellTo, spec.transition, "exit");
     cell.animate(built.keyframes, built.options);
   }
