@@ -35,6 +35,18 @@ export function enter(el) {
   const spec = readSpec(el);
   if (!spec) return;
 
+  const plan = enterPlan(el, spec);
+  if (plan) animateEnter(plan);
+}
+
+/**
+ * The read half of an enter: seed the layout cache, resolve the initial/animate
+ * maps (reading natural size for smart-resolved height/width targets), and hold
+ * `overflow: hidden` for a size grow. Returns a plan for animateEnter, or null
+ * when there's nothing to animate. Kept separate from the write half so a batch
+ * can do all the reads before any of the writes.
+ */
+function enterPlan(el, spec) {
   /**
    * Every animated element seeds its layout, so a later mid-life change
    * (position OR size) can be measured against it. If the element is
@@ -108,8 +120,16 @@ export function enter(el) {
   }
 
   if (Object.keys(initial).length === 0 && Object.keys(animate).length === 0)
-    return;
+    return null;
 
+  return { el, spec, initial, animate, hasSize };
+}
+
+/**
+ * The write half of an enter: play the WAAPI animation from the plan. Reads no
+ * layout, so a batch can run every write back-to-back.
+ */
+function animateEnter({ el, spec, initial, animate, hasSize }) {
   let anim;
   if (Object.keys(initial).length > 0 && Object.keys(animate).length > 0) {
     const { keyframes, options } = buildKeyframes(
