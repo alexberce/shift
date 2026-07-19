@@ -3,6 +3,26 @@
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning:
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.2.0
+
+### Added
+
+- `pin_exit` attribute. On exit, if a staying sibling would move up into the
+  leaving element's slot, Shift lifts the element out of flow (`position:
+  fixed`) so the neighbours close the gap during the exit instead of snapping
+  shut once the node is removed. Best for fade and scale exits. Off by default.
+
+### Performance
+
+- Enter and exit animations on large streamed lists no longer thrash layout. A
+  filter that adds or removes hundreds of rows used to read and write layout
+  once per row, forcing a reflow each time. Shift now batches the reads and the
+  writes for the whole burst, so it forces layout once.
+- Elements far outside the viewport skip their enter and exit animation. On a
+  long filtered list only the visible rows animate, and the rest appear or
+  disappear at rest. Visibility is tracked with an `IntersectionObserver`, so
+  deciding whether to skip reads no layout when a row enters or leaves.
+
 ## v0.1.7
 
 ### Fixed

@@ -18,7 +18,7 @@
  */
 
 import { SEEN, TRACKED, readSpec } from "./state.js";
-import { measure } from "./measure.js";
+import { measure, farOffscreen, trackVisibility } from "./measure.js";
 import {
   REST,
   fillCollapseProps,
@@ -31,10 +31,49 @@ export function enter(el) {
   if (SEEN.has(el)) return;
   SEEN.add(el);
   TRACKED.add(el);
+  trackVisibility(el);
 
   const spec = readSpec(el);
   if (!spec) return;
 
+  enterQueue.push({ el, spec });
+  if (!enterFlushScheduled) {
+    enterFlushScheduled = true;
+    queueMicrotask(flushEnters);
+  }
+}
+
+/**
+ * Flush the queued enters — every enterPlan read first (measure / offsetHeight /
+ * getComputedStyle), then every animateEnter write, so a burst of new rows
+ * forces layout once instead of once per row. Deferred by a microtask (still
+ * before the next paint), so the animations start on the same frame they would
+ * have run synchronously.
+ */
+const enterQueue = [];
+let enterFlushScheduled = false;
+
+function flushEnters() {
+  enterFlushScheduled = false;
+  const batch = enterQueue.splice(0, enterQueue.length);
+
+  // READ pass — every layout read for the whole burst, before any write.
+  const plans = batch
+    .map(({ el, spec }) => enterPlan(el, spec))
+    .filter(Boolean);
+
+  // WRITE pass — every animation.
+  for (const plan of plans) animateEnter(plan);
+}
+
+/**
+ * The read half of an enter: seed the layout cache, resolve the initial/animate
+ * maps (reading natural size for smart-resolved height/width targets), and hold
+ * `overflow: hidden` for a size grow. Returns a plan for animateEnter, or null
+ * when there's nothing to animate. Kept separate from the write half so a batch
+ * can do all the reads before any of the writes.
+ */
+function enterPlan(el, spec) {
   /**
    * Every animated element seeds its layout, so a later mid-life change
    * (position OR size) can be measured against it. If the element is
@@ -57,6 +96,13 @@ export function enter(el) {
     el.__shiftSiblingIndex = [...el.parentElement.children].indexOf(el);
     el.parentElement.__shiftLastEnterMs = performance.now();
   }
+
+  /**
+   * Far outside the viewport — nobody will see the enter, so skip it and let
+   * the element appear at its resting state. Layout is already seeded above, so
+   * a later FLIP still works if it scrolls in and something shifts it.
+   */
+  if (farOffscreen(el)) return null;
 
   const disabled = spec.disable || [];
   const wantFade = !disabled.includes("fade");
@@ -108,8 +154,16 @@ export function enter(el) {
   }
 
   if (Object.keys(initial).length === 0 && Object.keys(animate).length === 0)
-    return;
+    return null;
 
+  return { el, spec, initial, animate, hasSize };
+}
+
+/**
+ * The write half of an enter: play the WAAPI animation from the plan. Reads no
+ * layout, so a batch can run every write back-to-back.
+ */
+function animateEnter({ el, spec, initial, animate, hasSize }) {
   let anim;
   if (Object.keys(initial).length > 0 && Object.keys(animate).length > 0) {
     const { keyframes, options } = buildKeyframes(

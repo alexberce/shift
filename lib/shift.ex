@@ -48,6 +48,17 @@ defmodule Shift do
       "inferred mid-life animations to opt out of for this element. " <>
         "Valid atoms: :position, :size. Defaults to none disabled."
 
+  attr :pin_exit, :boolean,
+    default: false,
+    doc: """
+    On exit, if a staying sibling would reflow up into this element's slot, \
+    lift the element out of flow (`position: fixed`) so the neighbours close \
+    the gap during the exit instead of snapping shut after removal. Best for \
+    fade/scale exits; avoid it when the exit translates the element (`x`/`y`), \
+    since the pinned element then animates over the neighbour that took its \
+    place.\
+    """
+
   attr :transition, :map,
     default: %{},
     doc: """
@@ -72,9 +83,12 @@ defmodule Shift do
         animate: assigns.animate,
         exit: assigns.exit,
         disable: assigns.disable,
-        transition: assigns.transition
+        transition: assigns.transition,
+        pin_exit: assigns.pin_exit
       }
-      |> Enum.reject(fn {_key, value} -> is_nil(value) or value == %{} or value == [] end)
+      |> Enum.reject(fn {_key, value} ->
+        is_nil(value) or value == %{} or value == [] or value == false
+      end)
       |> Map.new()
 
     assigns = assign(assigns, :shift, Jason.encode!(spec))

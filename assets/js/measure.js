@@ -64,3 +64,55 @@ export function measure(el) {
     parent: el.parentElement,
   };
 }
+
+/**
+ * Off-screen visibility, tracked with an IntersectionObserve.
+ *
+ * The observer instead stamps `__shiftOnscreen` on every tracked element
+ * asynchronously as it scrolls in and out, so by the time a row exits we
+ * already know whether it's visible.
+ */
+let visObserver;
+
+function visObserverInstance() {
+  if (visObserver !== undefined) return visObserver;
+
+  visObserver =
+    typeof IntersectionObserver === "undefined"
+      ? null
+      : new IntersectionObserver(
+          (entries) => {
+            for (const e of entries)
+              e.target.__shiftOnscreen = e.isIntersecting;
+          },
+          { rootMargin: "100% 0px 100% 0px" },
+        );
+
+  return visObserver;
+}
+
+/** Start observing an element's viewport visibility (called once, at enter). */
+export function trackVisibility(el) {
+  const obs = visObserverInstance();
+  if (obs) obs.observe(el);
+}
+
+/** Stop observing — called when a tracked element leaves the DOM. */
+export function untrackVisibility(el) {
+  if (visObserver) visObserver.unobserve(el);
+}
+
+/**
+ * Is the element far enough outside the viewport that an enter/exit animation
+ * on it would never be seen? Reads the observer's cached flag. Falls back to a
+ * direct `getBoundingClientRect` only when we have no flag yet — e.g. a row
+ * entering this very patch, which the observer hasn't reported on, and which is
+ * one element, not the hundreds a filter exit spans.
+ */
+export function farOffscreen(el) {
+  if (el.__shiftOnscreen !== undefined) return el.__shiftOnscreen === false;
+
+  const vh = window.innerHeight || document.documentElement.clientHeight || 0;
+  const rect = el.getBoundingClientRect();
+  return rect.bottom < -vh || rect.top > vh + vh;
+}
