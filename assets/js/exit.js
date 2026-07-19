@@ -124,8 +124,7 @@ function exitPlan(el, spec, exitMap) {
 
 /**
  * The write half of an exit: play the element's WAAPI animation, then the
- * per-cell collapse animations for a `display: table-row` (an empty `cellPlans`
- * for anything else).
+ * per-cell collapse animations for a `display: table-row`.
  */
 function animateExit({ el, spec, from, exitMap, cellPlans }) {
   const { keyframes, options } = buildKeyframes(
