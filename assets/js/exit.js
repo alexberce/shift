@@ -79,7 +79,7 @@ export function exit(el) {
    *     replacement: sliding window, toast queue swap). Detected without the
    *     MutationObserver — morphdom inserts new nodes before phx-remove fires,
    *     so a `data-shift` sibling we've never SEEN is a pending enter.
-   *   - `pin_exit` is opted in AND a surviving sibling sits after this element
+   *   - `pin_exit` is opted in AND a staying sibling sits after this element
    *     (it will reflow up into the vacated slot). Off by default: pinning a
    *     lone exit only drops the parent's height and snaps whatever sits below,
    *     and pinning under a translate exit animates the leaver over the
@@ -94,9 +94,9 @@ export function exit(el) {
     );
   const recentEnter =
     parent && performance.now() - (parent.__shiftLastEnterMs || 0) < 100;
-  const survivingFollower = spec.pin_exit === true && hasSurvivingFollower(el);
+  const stayingSibling = spec.pin_exit === true && hasStayingSiblingAfter(el);
 
-  if (!hasSize && (pendingSibling || recentEnter || survivingFollower)) {
+  if (!hasSize && (pendingSibling || recentEnter || stayingSibling)) {
     applyExitPin(el);
   }
 
@@ -185,11 +185,11 @@ export function exit(el) {
 }
 
 /**
- * Is there a tracked sibling after `el` that will survive this patch and
- * reflow up into its slot? "Surviving" = already entered (SEEN) and not
- * itself mid-exit. Used only under the opt-in `pin_exit`.
+ * Is there a tracked sibling after `el` that will stay through this patch and
+ * reflow up into its slot? "Staying" = already entered (SEEN) and not itself
+ * mid-exit. Used only under the opt-in `pin_exit`.
  */
-function hasSurvivingFollower(el) {
+function hasStayingSiblingAfter(el) {
   let sib = el.nextElementSibling;
   while (sib) {
     if (
