@@ -108,43 +108,12 @@ export function exit(el) {
   );
   el.animate(keyframes, options);
 
-  /**
-   * `display: table-row` ignores CSS `height` — the row's height is derived
-   * from its tallest cell. We can't switch the row to `display: block`
-   * without breaking column alignment, so we collapse each cell from the
-   * inside: padding to 0 (shrinks the cell's box) and font-size +
-   * line-height to 0 (collapses the inline content height). With both, the
-   * cell — and therefore the row — can actually reach 0 height while the
-   * table layout stays intact.
-   */
-  if (
-    hasSize &&
-    "height" in exitMap &&
-    getComputedStyle(el).display === "table-row"
-  ) {
-    for (const cell of el.children) {
-      if (cell.tagName !== "TD" && cell.tagName !== "TH") continue;
-      const ccs = getComputedStyle(cell);
-      const cellFrom = {
-        paddingTop: parseFloat(ccs.paddingTop) || 0,
-        paddingBottom: parseFloat(ccs.paddingBottom) || 0,
-        fontSize: parseFloat(ccs.fontSize) || 0,
-        lineHeight:
-          ccs.lineHeight === "normal"
-            ? (parseFloat(ccs.fontSize) || 0) * 1.2
-            : parseFloat(ccs.lineHeight) || 0,
-        overflow: "hidden",
-      };
-      const cellTo = {
-        paddingTop: 0,
-        paddingBottom: 0,
-        fontSize: 0,
-        lineHeight: 0,
-        overflow: "hidden",
-      };
-      const built = buildKeyframes(cellFrom, cellTo, spec.transition, "exit");
-      cell.animate(built.keyframes, built.options);
-    }
+  for (const { cell, from: cellFrom, to: cellTo } of tableRowCellPlans(
+    el,
+    exitMap,
+  )) {
+    const built = buildKeyframes(cellFrom, cellTo, spec.transition, "exit");
+    cell.animate(built.keyframes, built.options);
   }
 
   /**
@@ -162,6 +131,48 @@ export function exit(el) {
    * while a size-collapsing exit is alive.
    */
   if (hasSize && el.parentElement) startParentTick(el.parentElement);
+}
+
+/**
+ * `display: table-row` ignores CSS `height` — the row's height is derived from
+ * its tallest cell. We can't switch the row to `display: block` without breaking
+ * column alignment, so we collapse each cell from the inside: padding to 0, and
+ * font-size + line-height to 0 to collapse the inline content. With both, the
+ * cell — and therefore the row — reaches 0 height while the table layout stays
+ * intact. Returns the per-cell from/to collapse plans (empty when this isn't a
+ * height-collapsing table row).
+ */
+function tableRowCellPlans(el, exitMap) {
+  if (!("height" in exitMap)) return [];
+  if (getComputedStyle(el).display !== "table-row") return [];
+
+  const plans = [];
+  for (const cell of el.children) {
+    if (cell.tagName !== "TD" && cell.tagName !== "TH") continue;
+    const ccs = getComputedStyle(cell);
+    plans.push({
+      cell,
+      from: {
+        paddingTop: parseFloat(ccs.paddingTop) || 0,
+        paddingBottom: parseFloat(ccs.paddingBottom) || 0,
+        fontSize: parseFloat(ccs.fontSize) || 0,
+        lineHeight:
+          ccs.lineHeight === "normal"
+            ? (parseFloat(ccs.fontSize) || 0) * 1.2
+            : parseFloat(ccs.lineHeight) || 0,
+        overflow: "hidden",
+      },
+      to: {
+        paddingTop: 0,
+        paddingBottom: 0,
+        fontSize: 0,
+        lineHeight: 0,
+        overflow: "hidden",
+      },
+    });
+  }
+
+  return plans;
 }
 
 /**
