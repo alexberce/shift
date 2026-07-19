@@ -58,21 +58,7 @@ export function exit(el) {
   restoreCascadingExitSlots();
   if (shouldPin(el, spec, hasSize)) applyExitPin(el);
 
-  const { keyframes, options } = buildKeyframes(
-    from,
-    exitMap,
-    spec.transition,
-    "exit",
-  );
-  el.animate(keyframes, options);
-
-  for (const { cell, from: cellFrom, to: cellTo } of tableRowCellPlans(
-    el,
-    exitMap,
-  )) {
-    const built = buildKeyframes(cellFrom, cellTo, spec.transition, "exit");
-    cell.animate(built.keyframes, built.options);
-  }
+  animateExit(el, spec, from, exitMap);
 
   /**
    * Size-collapse exits cause siblings to reflow continuously while the box
@@ -89,6 +75,29 @@ export function exit(el) {
    * while a size-collapsing exit is alive.
    */
   if (hasSize && el.parentElement) startParentTick(el.parentElement);
+}
+
+/**
+ * Play an exit's WAAPI animation — the element itself, then the per-cell
+ * collapse animations for a `display: table-row` (see tableRowCellPlans, which
+ * returns an empty list for anything else).
+ */
+function animateExit(el, spec, from, exitMap) {
+  const { keyframes, options } = buildKeyframes(
+    from,
+    exitMap,
+    spec.transition,
+    "exit",
+  );
+  el.animate(keyframes, options);
+
+  for (const { cell, from: cellFrom, to: cellTo } of tableRowCellPlans(
+    el,
+    exitMap,
+  )) {
+    const built = buildKeyframes(cellFrom, cellTo, spec.transition, "exit");
+    cell.animate(built.keyframes, built.options);
+  }
 }
 
 /**
