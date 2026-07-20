@@ -39,6 +39,16 @@ export function relayout() {
      */
     if (el.__shiftTransitioning) continue;
 
+    /**
+     * Skip elements far outside the viewport. This pass runs on every patch
+     * and `measure` walks two offsetParent chains per element, so on a page
+     * with hundreds of tracked elements the scan costs tens of thousands of
+     * layout reads — for movements nobody can see. The cached layout goes
+     * stale while skipped; the visibility observer reseeds it the moment the
+     * element comes back toward the viewport (see trackVisibility).
+     */
+    if (el.__shiftOnscreen === false) continue;
+
     const spec = readSpec(el);
     if (!spec) continue;
 

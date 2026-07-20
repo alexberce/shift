@@ -306,6 +306,12 @@ function refreshChildLayouts(parent) {
     if (!child.hasAttribute("data-shift")) continue;
     if (!child.isConnected) continue;
     if (child.__shiftTransitioning) continue;
+    /**
+     * This runs once per frame for the whole collapse — skip siblings far
+     * outside the viewport. Their movement can't be seen, and the visibility
+     * observer reseeds their layout when they come back toward the viewport.
+     */
+    if (child.__shiftOnscreen === false) continue;
     child.__shiftLayout = measure(child);
   }
 }
