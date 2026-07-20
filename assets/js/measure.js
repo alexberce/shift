@@ -82,8 +82,21 @@ function visObserverInstance() {
       ? null
       : new IntersectionObserver(
           (entries) => {
-            for (const e of entries)
-              e.target.__shiftOnscreen = e.isIntersecting;
+            for (const e of entries) {
+              const el = e.target;
+              el.__shiftOnscreen = e.isIntersecting;
+              /**
+               * Relayout skips off-screen elements, so their cached layout
+               * goes stale while the page changes around them. Reseed the
+               * moment the element comes back toward the viewport, so a later
+               * FLIP diffs against a real position instead of a stale one.
+               * IO callbacks run right after layout, so the reads are clean.
+               */
+              if (e.isIntersecting && !el.__shiftTransitioning) {
+                const layout = measure(el);
+                if (layout) el.__shiftLayout = layout;
+              }
+            }
           },
           { rootMargin: "100% 0px 100% 0px" },
         );

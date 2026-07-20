@@ -3,6 +3,19 @@
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning:
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.2.1
+
+### Performance
+
+- The relayout pass (inferred FLIP and size animations) now skips elements far
+  outside the viewport. It runs on every LiveView patch and measured every
+  tracked element, so on a page with hundreds of animated elements a patch that
+  changed three of them still cost tens of thousands of layout reads — twice,
+  since the deferred exit removal triggers a second pass. Off-screen elements
+  are now skipped, and the visibility observer reseeds their cached layout when
+  they come back toward the viewport. The per-frame sibling remeasure during a
+  size-collapse exit skips off-screen siblings the same way.
+
 ## v0.2.0
 
 ### Added
