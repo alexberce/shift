@@ -23,7 +23,7 @@
  */
 
 import { SEEN, TRACKED, RUNTIME, readSpec } from "./state.js";
-import { measure, farOffscreen } from "./measure.js";
+import { measure, farOffscreen, withoutLayoutAnimations } from "./measure.js";
 import { REST, fillCollapseProps, buildKeyframes } from "./keyframes.js";
 
 export function exit(el) {
@@ -302,18 +302,20 @@ function hasStayingSiblingAfter(el) {
 
 function refreshChildLayouts(parent) {
   if (!parent) return;
-  for (const child of parent.children) {
-    if (!child.hasAttribute("data-shift")) continue;
-    if (!child.isConnected) continue;
-    if (child.__shiftTransitioning) continue;
-    /**
-     * This runs once per frame for the whole collapse — skip siblings far
-     * outside the viewport. Their movement can't be seen, and the visibility
-     * observer reseeds their layout when they come back toward the viewport.
-     */
-    if (child.__shiftOnscreen === false) continue;
-    child.__shiftLayout = measure(child);
-  }
+  withoutLayoutAnimations(() => {
+    for (const child of parent.children) {
+      if (!child.hasAttribute("data-shift")) continue;
+      if (!child.isConnected) continue;
+      if (child.__shiftTransitioning) continue;
+      /**
+       * This runs once per frame for the whole collapse — skip siblings far
+       * outside the viewport. Their movement can't be seen, and the visibility
+       * observer reseeds their layout when they come back toward the viewport.
+       */
+      if (child.__shiftOnscreen === false) continue;
+      child.__shiftLayout = measure(child);
+    }
+  });
 }
 
 function clearChildLayouts(parent) {

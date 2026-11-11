@@ -29,7 +29,7 @@ import { enter } from "./enter.js";
 import { exit } from "./exit.js";
 import { relayout } from "./relayout.js";
 import { TRACKED, RUNTIME } from "./state.js";
-import { measure } from "./measure.js";
+import { measure, withoutLayoutAnimations } from "./measure.js";
 
 function scan(node) {
   if (node.nodeType !== Node.ELEMENT_NODE) return;
@@ -92,7 +92,7 @@ export function init() {
         const el = entry.target;
         if (!entry.isIntersecting) continue;
         if (el.__shiftLayout) continue;
-        const layout = measure(el);
+        const layout = withoutLayoutAnimations(() => measure(el));
         if (layout) el.__shiftLayout = layout;
       }
     },
@@ -157,11 +157,13 @@ export function init() {
     resizeScheduled = true;
     requestAnimationFrame(() => {
       resizeScheduled = false;
-      for (const el of TRACKED) {
-        if (!el.isConnected) continue;
-        if (el.__shiftTransitioning) continue;
-        el.__shiftLayout = measure(el);
-      }
+      withoutLayoutAnimations(() => {
+        for (const el of TRACKED) {
+          if (!el.isConnected) continue;
+          if (el.__shiftTransitioning) continue;
+          el.__shiftLayout = measure(el);
+        }
+      });
     });
   });
 }

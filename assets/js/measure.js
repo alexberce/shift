@@ -1,3 +1,26 @@
+import { TRACKED } from "./state.js";
+
+/**
+ * Runs `read` with the effects of running layout animations detached, then reattaches them.
+ */
+export function withoutLayoutAnimations(read) {
+  const detached = [];
+
+  for (const el of TRACKED) {
+    const anim = el.__shiftFlip;
+    if (anim && (anim.playState === "running" || anim.playState === "paused")) {
+      detached.push([anim, anim.effect]);
+      anim.effect = null;
+    }
+  }
+
+  const result = read();
+
+  for (const [anim, effect] of detached) anim.effect = effect;
+
+  return result;
+}
+
 /**
  * Body-relative layout measurement.
  *
@@ -93,7 +116,7 @@ function visObserverInstance() {
                * IO callbacks run right after layout, so the reads are clean.
                */
               if (e.isIntersecting && !el.__shiftTransitioning) {
-                const layout = measure(el);
+                const layout = withoutLayoutAnimations(() => measure(el));
                 if (layout) el.__shiftLayout = layout;
               }
             }

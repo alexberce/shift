@@ -15,10 +15,14 @@
  */
 
 import { TRACKED, readSpec } from "./state.js";
-import { measure, untrackVisibility } from "./measure.js";
+import {
+  measure,
+  untrackVisibility,
+  withoutLayoutAnimations,
+} from "./measure.js";
 import { buildKeyframes } from "./keyframes.js";
 
-export function relayout() {
+function findChanges() {
   const changed = [];
 
   for (const el of TRACKED) {
@@ -117,6 +121,12 @@ export function relayout() {
       });
     }
   }
+
+  return changed;
+}
+
+export function relayout() {
+  const changed = withoutLayoutAnimations(findChanges);
 
   for (const item of changed) {
     if (item.el.__shiftFlip) item.el.__shiftFlip.cancel();
