@@ -3,6 +3,15 @@
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning:
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.2.2
+
+### Fixed
+
+- Elements no longer switch between two sizes when the page changes on every
+  frame while a size animation runs. Shift now measures layout with its
+  running layout animations detached, so an animated size is never stored as
+  the element's real size.
+
 ## v0.2.1
 
 ### Performance
