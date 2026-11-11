@@ -18,7 +18,12 @@
  */
 
 import { SEEN, TRACKED, readSpec } from "./state.js";
-import { measure, farOffscreen, trackVisibility } from "./measure.js";
+import {
+  measure,
+  farOffscreen,
+  trackVisibility,
+  withoutLayoutAnimations,
+} from "./measure.js";
 import {
   REST,
   fillCollapseProps,
@@ -58,9 +63,9 @@ function flushEnters() {
   const batch = enterQueue.splice(0, enterQueue.length);
 
   // READ pass — every layout read for the whole burst, before any write.
-  const plans = batch
-    .map(({ el, spec }) => enterPlan(el, spec))
-    .filter(Boolean);
+  const plans = withoutLayoutAnimations(() =>
+    batch.map(({ el, spec }) => enterPlan(el, spec)).filter(Boolean),
+  );
 
   // WRITE pass — every animation.
   for (const plan of plans) animateEnter(plan);
@@ -194,7 +199,7 @@ function animateEnter({ el, spec, initial, animate, hasSize }) {
     el.__shiftTransitioning = true;
     anim.addEventListener("finish", () => {
       el.__shiftTransitioning = false;
-      el.__shiftLayout = measure(el);
+      el.__shiftLayout = withoutLayoutAnimations(() => measure(el));
       anim.cancel();
     });
     anim.addEventListener("cancel", () => {
