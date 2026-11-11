@@ -4,6 +4,8 @@
 /doc/
 /tmp/
 
+.idea
+
 erl_crash.dump
 *.ez
 shift-*.tar
